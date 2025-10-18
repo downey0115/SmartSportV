@@ -11,6 +11,8 @@ const exportUtil = require('../../../../framework/utils/export_util.js');
 const timeUtil = require('../../../../framework/utils/time_util.js');
 const dataUtil = require('../../../../framework/utils/data_util.js');
 const UserModel = require('../../model/user_model.js');
+const EnrollJoinModel = require('../../model/enroll_join_model.js');
+const PayModel = require('../../model/pay_model.js');
 const AdminHomeService = require('./admin_home_service.js');
 
 // 导出用户数据KEY
@@ -86,12 +88,28 @@ class AdminUserService extends BaseProjectAdminService {
 	}
 
 	async statusUser(id, status, reason) {
-		this.AppError('[场地预订P]该功能暂不开放，如有需要请加作者微信：cclinux0730');
+		if (!id) this.AppError('参数错误');
+		status = Number(status);
+		const allow = [0,1,8,9];
+		if (!allow.includes(status)) this.AppError('非法状态值');
+		let where = { USER_MINI_OPENID: id };
+		let user = await UserModel.getOne(where, 'USER_MINI_OPENID');
+		if (!user) this.AppError('用户不存在');
+		let data = { USER_STATUS: status, USER_EDIT_TIME: this._timestamp };
+		if (status !== 1) data.USER_CHECK_REASON = reason || '';
+		await UserModel.edit(where, data);
 	}
 
 	/**删除用户 */
 	async delUser(id) {
-		this.AppError('[场地预订P]该功能暂不开放，如有需要请加作者微信：cclinux0730');
+		if (!id) this.AppError('参数错误');
+		// 有有效预约禁止删除
+		let joinCnt = await EnrollJoinModel.count({ ENROLL_JOIN_USER_ID: id, ENROLL_JOIN_STATUS: EnrollJoinModel.STATUS.SUCC });
+		if (joinCnt > 0) this.AppError('该用户存在有效预约记录，禁止删除');
+		// 存在支付流水也禁止删除（模糊匹配）
+		let payCnt = await PayModel.count({ PAY_USER_ID: ['like', id] });
+		if (payCnt > 0) this.AppError('该用户存在支付流水，禁止删除');
+		await UserModel.del({ USER_MINI_OPENID: id });
 	}
 
 	// #####################导出用户数据
@@ -108,9 +126,35 @@ class AdminUserService extends BaseProjectAdminService {
 
 	/**导出用户数据 */
 	async exportUserDataExcel(condition, fields) {
-
-		this.AppError('[场地预订P]该功能暂不开放，如有需要请加作者微信：cclinux0730');
-
+		try { condition = JSON.parse(decodeURIComponent(condition || '')); } catch(e) { condition = {}; }
+		let where = condition || {};
+		let page = 1, size = 200, total = 0, all = [];
+		let orderBy = { USER_ADD_TIME: 'desc' };
+		let queryFields = '*';
+		while (true) {
+			let ret = await UserModel.getList(where, queryFields, orderBy, page, size, page===1, 0);
+			if (page===1) total = ret.total || 0;
+			let list = ret.list || [];
+			all = all.concat(list);
+			if (!list.length || all.length >= total) break;
+			page++;
+		}
+		// 组装表头和数据
+		let header = ['昵称','手机号','状态','注册时间','最近登录','登录次数'];
+		let data = [header];
+		for (let u of all) {
+			data.push([
+				u.USER_NAME || '',
+				u.USER_MOBILE || '',
+				UserModel.getDesc ? UserModel.getDesc('STATUS', u.USER_STATUS) : String(u.USER_STATUS),
+				timeUtil.timestamp2Time(u.USER_ADD_TIME),
+				u.USER_LOGIN_TIME ? timeUtil.timestamp2Time(u.USER_LOGIN_TIME) : '未登录',
+				Number(u.USER_LOGIN_CNT||0)
+			]);
+		}
+		let title = '用户数据';
+		let options = { '!cols': [{wch:12},{wch:12},{wch:10},{wch:19},{wch:19},{wch:10}] };
+		return await exportUtil.exportDataExcel(EXPORT_USER_DATA_KEY, title, all.length, data, options);
 	}
 
 }

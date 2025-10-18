@@ -425,11 +425,27 @@ class AdminEnrollService extends BaseProjectAdminService {
 		return await EnrollJoinModel.getList(where, fields, orderBy, page, size, isTotal, oldTotal);
 	}
 
-	/** 取消 */
+	/** 管理员取消订单 */
 	async cancelEnrollJoin(enrollJoinId) {
-		this.AppError('[场地预订P]该功能暂不开放，如有需要请加作者微信：cclinux0730');
+		if (!enrollJoinId) this.AppError('参数错误');
+		let where = { _id: enrollJoinId, ENROLL_JOIN_STATUS: EnrollJoinModel.STATUS.SUCC };
+		let enrollJoin = await EnrollJoinModel.getOne(where, '*');
+		if (!enrollJoin) this.AppError('未找到可取消的记录');
 
+		if (enrollJoin.ENROLL_JOIN_IS_CHECKIN == 1)
+			this.AppError('该预订已核销，不能取消');
 
+		// 暂不处理退款逻辑；仅允许未支付或免支付订单被后台取消
+		if (enrollJoin.ENROLL_JOIN_PAY_STATUS == 1)
+			this.AppError('已支付订单暂不支持后台取消');
+
+		let data = {
+			ENROLL_JOIN_STATUS: EnrollJoinModel.STATUS.ADMIN_CANCEL,
+			ENROLL_JOIN_CANCEL_TIME: this._timestamp,
+			ENROLL_JOIN_IS_CHECKIN: 0,
+			ENROLL_JOIN_LAST_TIME: this._timestamp,
+		};
+		await EnrollJoinModel.edit(enrollJoinId, data);
 	}
 
 	// #####################导出登记数据

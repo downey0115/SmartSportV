@@ -93,6 +93,9 @@ Page({
 					fail: () => {},
 					complete: () => {}
 				});
+			} else if (ret && ret.needConfig) {
+				wx.showModal({ title: '支付未开通', content: ret.msg || '请联系管理员完成支付配置后再试', showCancel: false });
+				await this._loadDetail();
 			} else {
 				await this._loadDetail();
 			}

@@ -5,6 +5,6 @@ module.exports = {
 	// 每个时段最大预订次数
 	MEET_MAX_JOIN_CNT: 1,
 
-	IS_DEMO: true
+	IS_DEMO: false
 
 }

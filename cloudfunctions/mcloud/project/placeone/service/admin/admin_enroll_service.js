@@ -142,15 +142,47 @@ class AdminEnrollService extends BaseProjectAdminService {
 		forms,
 		joinForms,
 	}) {
+		// 最小可用实现：插入一条启用中的场地记录
+		let now = timeUtil.time();
+		forms = Array.isArray(forms) ? forms : [];
+		joinForms = Array.isArray(joinForms) ? joinForms : [];
 
-		this.AppError('[场地预订P]该功能暂不开放，如有需要请加作者微信：cclinux0730');
+		let doc = {
+			ENROLL_TITLE: title.trim(),
+			ENROLL_STATUS: 1,
+			ENROLL_CATE_ID: String(cateId),
+			ENROLL_CATE_NAME: String(cateName || ''),
+			ENROLL_CANCEL_SET: Number(cancelSet || 1),
+			ENROLL_EDIT_SET: Number(editSet || 1),
+			ENROLL_ORDER: Number(order || 9999),
+			ENROLL_VOUCH: 0,
+			ENROLL_FORMS: forms,
+			ENROLL_OBJ: dataUtil.dbForms2Obj(forms, true),
+			ENROLL_JOIN_FORMS: joinForms,
+			ENROLL_DAYS: [],
+			ENROLL_DAY_CNT: 0,
+			ENROLL_QR: '',
+			ENROLL_VIEW_CNT: 0,
+			ENROLL_JOIN_CNT: 0,
+			ENROLL_ADD_TIME: now,
+			ENROLL_EDIT_TIME: now
+		};
+
+		let id = await EnrollModel.insert(doc);
+		return { id };
 	}
 
 	/**删除数据 */
 	async delEnroll(id) {
-		this.AppError('[场地预订P]该功能暂不开放，如有需要请加作者微信：cclinux0730');
+		// 若存在有效预约记录则禁止删除，避免脏数据
+		let joinCnt = await EnrollJoinModel.count({ ENROLL_JOIN_ENROLL_ID: id, ENROLL_JOIN_STATUS: EnrollJoinModel.STATUS.SUCC });
+		if (joinCnt > 0) this.AppError('存在有效的预约记录，无法删除，请先取消相关预约');
 
+		// 删除该场地的日期时段配置
+		await DayModel.del({ DAY_ENROLL_ID: id });
 
+		// 删除场地
+		await EnrollModel.del(id);
 	}
 
 	/**获取信息 */
@@ -159,13 +191,27 @@ class AdminEnrollService extends BaseProjectAdminService {
 	}
 
 
-	// 更新forms信息
+	// 更新forms信息（仅更新含图片类字段时的回填）
 	async updateEnrollForms({
 		id,
 		hasImageForms
 	}) {
-		this.AppError('[场地预订P]该功能暂不开放，如有需要请加作者微信：cclinux0730');
-
+		if (!Array.isArray(hasImageForms)) hasImageForms = [];
+		let enroll = await EnrollModel.getOne(id, '*');
+		if (!enroll) this.AppError('场地不存在');
+		// 这里按最小实现：将 hasImageForms 合并回 ENROLL_FORMS 并更新 ENROLL_OBJ
+		let forms = Array.isArray(enroll.ENROLL_FORMS) ? enroll.ENROLL_FORMS : [];
+		// 按 mark 替换
+		for (let i = 0; i < hasImageForms.length; i++) {
+			let inc = hasImageForms[i] || {};
+			for (let j = 0; j < forms.length; j++) {
+				if (forms[j].mark && inc.mark && forms[j].mark === inc.mark) {
+					forms[j] = { ...forms[j], ...inc };
+				}
+			}
+		}
+		await EnrollModel.edit(id, { ENROLL_FORMS: forms, ENROLL_OBJ: dataUtil.dbForms2Obj(forms, true), ENROLL_EDIT_TIME: timeUtil.time() });
+		return { id };
 	}
 
 
@@ -184,15 +230,34 @@ class AdminEnrollService extends BaseProjectAdminService {
 		forms,
 		joinForms
 	}) {
+		let enroll = await EnrollModel.getOne(id, '*');
+		if (!enroll) this.AppError('场地不存在');
 
-		this.AppError('[场地预订P]该功能暂不开放，如有需要请加作者微信：cclinux0730');
+		forms = Array.isArray(forms) ? forms : [];
+		joinForms = Array.isArray(joinForms) ? joinForms : [];
 
+		let data = {
+			ENROLL_TITLE: title.trim(),
+			ENROLL_CATE_ID: String(cateId),
+			ENROLL_CATE_NAME: String(cateName || ''),
+			ENROLL_CANCEL_SET: Number(cancelSet || 1),
+			ENROLL_EDIT_SET: Number(editSet || 1),
+			ENROLL_ORDER: Number(order || 9999),
+			ENROLL_FORMS: forms,
+			ENROLL_OBJ: dataUtil.dbForms2Obj(forms, true),
+			ENROLL_JOIN_FORMS: joinForms,
+			ENROLL_EDIT_TIME: timeUtil.time()
+		};
+
+		await EnrollModel.edit(id, data);
+		return { id };
 	}
 
 	/**修改状态 */
 	async statusEnroll(id, status) {
-		this.AppError('[场地预订P]该功能暂不开放，如有需要请加作者微信：cclinux0730');
-
+		// status: 1=启用, 0=停用
+		if (![0,1].includes(Number(status))) this.AppError('非法状态值');
+		await EnrollModel.edit(id, { ENROLL_STATUS: Number(status) });
 	}
 
 
@@ -299,7 +364,67 @@ class AdminEnrollService extends BaseProjectAdminService {
 			days
 		}
 	) {
-		this.AppError('[场地预订P]该功能暂不开放，如有需要请加作者微信：cclinux0730');
+		// 允许清空：当 days 为空数组时，清理该场地的所有未来日期配置
+		let enroll = await EnrollModel.getOne(enrollId, 'ENROLL_ID,ENROLL_CATE_ID,ENROLL_STATUS');
+		if (!enroll) this.AppError('场地不存在');
+
+		if (!Array.isArray(days)) this.AppError('参数格式错误');
+
+		// 先删除同一场地下传入这些day的旧记录，再插入新记录（幂等）
+		if (days.length === 0) {
+			await DayModel.del({ DAY_ENROLL_ID: enrollId });
+			return { cnt: 0 };
+		}
+
+		// 收集要覆盖的天
+		let coverDays = days.map(d => d.day).filter(Boolean);
+		if (coverDays.length === 0) this.AppError('缺少有效日期');
+
+		await DayModel.del({ DAY_ENROLL_ID: enrollId, day: ['in', coverDays] });
+
+		let now = timeUtil.time();
+		let insertCnt = 0;
+		for (let i = 0; i < days.length; i++) {
+			let node = days[i] || {};
+			let d = String(node.day || '').trim();
+			let dayDesc = String(node.dayDesc || '').trim();
+			let times = Array.isArray(node.times) ? node.times : [];
+
+			if (!d) continue;
+
+			// 过滤并标准化 times
+			let stdTimes = [];
+			for (let j = 0; j < times.length; j++) {
+				let t = times[j] || {};
+				let start = String(t.start || '').trim();
+				let end = String(t.end || '').trim();
+				let price = Number(t.price || 0);
+				if (!start || !end) continue;
+				if (isNaN(price) || price < 0) price = 0;
+				stdTimes.push({
+					mark: t.mark || dataUtil.genRandomString(8),
+					start,
+					end,
+					price,
+					cnt: 0
+				});
+			}
+
+			let doc = {
+				DAY_ENROLL_ID: enrollId,
+				DAY_CATE_ID: enroll.ENROLL_CATE_ID || 0,
+				day: d,
+				dayDesc: dayDesc || d,
+				times: stdTimes,
+				DAY_ADD_TIME: now,
+				DAY_EDIT_TIME: now
+			};
+
+			await DayModel.insert(doc);
+			insertCnt++;
+		}
+
+		return { cnt: insertCnt };
 	}
 
 	async getAllDays(enrollId) {
@@ -325,24 +450,55 @@ class AdminEnrollService extends BaseProjectAdminService {
 		name,
 		times,
 	}) {
-
-		this.AppError('[场地预订P]该功能暂不开放，如有需要请加作者微信：cclinux0730');
+		if (!name || !Array.isArray(times)) this.AppError('参数错误');
+		// 规范化 times
+		let stdTimes = [];
+		for (let j = 0; j < times.length; j++) {
+			let t = times[j] || {};
+			let start = String(t.start || '').trim();
+			let end = String(t.end || '').trim();
+			let price = Number(t.price || 0);
+			if (!start || !end) continue;
+			if (isNaN(price) || price < 0) price = 0;
+			stdTimes.push({
+				mark: t.mark || dataUtil.genRandomString(8),
+				start,
+				end,
+				price,
+				cnt: 0
+			});
+		}
+		let now = timeUtil.time();
+		return await TempModel.insert({
+			TEMP_NAME: name,
+			TEMP_TIMES: stdTimes,
+			TEMP_ADD_TIME: now,
+			TEMP_EDIT_TIME: now
+		});
 	}
 
-	/**更新数据 */
+	/**更新模板：批量设置所有时段价格 */
 	async editTemp({
 		id,
 		price,
 	}) {
-
-
-		this.AppError('[场地预订P]该功能暂不开放，如有需要请加作者微信：cclinux0730');
+		let temp = await TempModel.getOne(id, '*');
+		if (!temp) this.AppError('模板不存在');
+		let p = Number(price);
+		if (isNaN(p) || p < 0) this.AppError('价格不合法');
+		let times = Array.isArray(temp.TEMP_TIMES) ? temp.TEMP_TIMES : [];
+		for (let i = 0; i < times.length; i++) {
+			times[i].price = p;
+		}
+		await TempModel.edit(id, { TEMP_TIMES: times, TEMP_EDIT_TIME: timeUtil.time() });
+		return { cnt: times.length };
 	}
 
 
 	/**删除数据 */
 	async delTemp(id) {
-		this.AppError('[场地预订P]该功能暂不开放，如有需要请加作者微信：cclinux0730');
+		await TempModel.del(id);
+		return { id };
 	}
 
 

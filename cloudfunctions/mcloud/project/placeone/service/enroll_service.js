@@ -343,9 +343,59 @@ class EnrollService extends BaseProjectService {
 		day,
 		forms
 	}) {
+		// 最小可用实现：不走在线支付，直接创建预约成功记录（PAY_STATUS=99）
+		// 1) 校验场地存在且可用
+		let enroll = await EnrollModel.getOne({ _id: enrollId, ENROLL_STATUS: EnrollModel.STATUS.COMM });
+		if (!enroll) this.AppError('该场地不存在');
 
-		this.AppError('[场地预订P]该功能暂不开放，如有需要请加作者微信：cclinux0730');
+		// 2) 价格与时间简单校验（按传参）
+		if (!day || !start || !end || !endPoint) this.AppError('时间参数不完整');
+		let fee = Number(price || 0);
+		if (isNaN(fee) || fee < 0) this.AppError('价格参数不合法');
 
+		// 3) 生成预约对象
+		let now = this._timestamp;
+		let data = {
+			ENROLL_JOIN_USER_ID: userId,
+			ENROLL_JOIN_ENROLL_ID: enrollId,
+			ENROLL_JOIN_ENROLL_TITLE: enroll.ENROLL_TITLE,
+			ENROLL_JOIN_CATE_ID: enroll.ENROLL_CATE_ID,
+			ENROLL_JOIN_CATE_NAME: enroll.ENROLL_CATE_NAME,
+			ENROLL_JOIN_CODE: dataUtil.genRandomIntString(15),
+			ENROLL_JOIN_DAY: day,
+			ENROLL_JOIN_START: start,
+			ENROLL_JOIN_END: end,
+			ENROLL_JOIN_END_POINT: endPoint,
+			ENROLL_JOIN_START_FULL: day + ' ' + start,
+			ENROLL_JOIN_END_FULL: day + ' ' + endPoint,
+			ENROLL_JOIN_FEE: Math.round(fee * 100),
+			ENROLL_JOIN_PAY_FEE: Math.round(fee * 100),
+			ENROLL_JOIN_PAY_STATUS: 99, // 无需支付
+			ENROLL_JOIN_STATUS: EnrollJoinModel.STATUS.SUCC,
+			ENROLL_JOIN_IS_CHECKIN: 0,
+			ENROLL_JOIN_FORMS: forms,
+			ENROLL_JOIN_OBJ: dataUtil.dbForms2Obj(forms),
+			ENROLL_JOIN_ADD_TIME: now,
+			ENROLL_JOIN_LAST_TIME: now,
+		};
+
+		// 冲突校验（简单检查该时间段是否已有成功记录）
+		let conflict = await EnrollJoinModel.getOne({
+			ENROLL_JOIN_ENROLL_ID: enrollId,
+			ENROLL_JOIN_DAY: day,
+			ENROLL_JOIN_STATUS: EnrollJoinModel.STATUS.SUCC,
+			ENROLL_JOIN_START: start,
+			ENROLL_JOIN_END: end
+		});
+		if (conflict) this.AppError('所选时段已被预订');
+
+		let id = await EnrollJoinModel.insert(data);
+
+		// 可在此更新统计（占位）
+		this.statEnrollJoin();
+
+		// 与前端约定：无 payRet 即表示无需拉起支付，前端会提示成功
+		return { id, payRet: null };
 	}
 
 

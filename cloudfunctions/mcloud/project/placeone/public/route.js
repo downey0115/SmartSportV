@@ -64,13 +64,13 @@ module.exports = {
 	'admin/news_list': 'admin/admin_news_controller@getAdminNewsList',
 	'admin/news_insert': 'admin/admin_news_controller@insertNews',
 	'admin/news_detail': 'admin/admin_news_controller@getNewsDetail',
-	'admin/news_edit': 'admin/admin_news_controller@editNews#demo',
+	'admin/news_edit': 'admin/admin_news_controller@editNews',
 	'admin/news_update_forms': 'admin/admin_news_controller@updateNewsForms',
 	'admin/news_update_pic': 'admin/admin_news_controller@updateNewsPic',
 	'admin/news_update_content': 'admin/admin_news_controller@updateNewsContent',
-	'admin/news_del': 'admin/admin_news_controller@delNews#demo',
+	'admin/news_del': 'admin/admin_news_controller@delNews',
 	'admin/news_sort': 'admin/admin_news_controller@sortNews',
-	'admin/news_status': 'admin/admin_news_controller@statusNews#demo',
+	'admin/news_status': 'admin/admin_news_controller@statusNews',
 	'admin/news_vouch': 'admin/admin_news_controller@vouchNews',
 
 

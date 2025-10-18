@@ -25,16 +25,25 @@ class AdminNewsService extends BaseProjectAdminService {
 		desc = '',
 		forms
 	}) {
-
-
-		this.AppError('[场地预订P]该功能暂不开放，如有需要请加作者微信：cclinux0730');
+		let data = {
+			NEWS_TITLE: title,
+			NEWS_CATE_ID: String(cateId),
+			NEWS_CATE_NAME: cateName,
+			NEWS_ORDER: Number(order),
+			NEWS_DESC: desc,
+			NEWS_FORMS: forms || [],
+			NEWS_OBJ: { desc },
+			NEWS_STATUS: 1,
+			NEWS_ADD_TIME: this._timestamp,
+			NEWS_EDIT_TIME: this._timestamp,
+		};
+		let id = await NewsModel.insert(data);
+		return { id };
 	}
 
 	/**删除资讯数据 */
 	async delNews(id) {
-		this.AppError('[场地预订P]该功能暂不开放，如有需要请加作者微信：cclinux0730');
-
-
+		await NewsModel.del(id);
 	}
 
 	/**获取资讯信息 */
@@ -55,8 +64,12 @@ class AdminNewsService extends BaseProjectAdminService {
 		id,
 		hasImageForms
 	}) {
-		this.AppError('[场地预订P]该功能暂不开放，如有需要请加作者微信：cclinux0730');
-
+		let data = {
+			NEWS_FORMS: hasImageForms || [],
+			NEWS_OBJ: dataUtil.dbForms2Obj(hasImageForms || []),
+			NEWS_EDIT_TIME: this._timestamp,
+		};
+		await NewsModel.edit(id, data);
 	}
 
 
@@ -68,9 +81,10 @@ class AdminNewsService extends BaseProjectAdminService {
 		id,
 		content // 富文本数组
 	}) {
-
-		this.AppError('[场地预订P]该功能暂不开放，如有需要请加作者微信：cclinux0730');
-
+		content = content || [];
+		// 仅落库，不做转存，后续可扩展 cloud file 转存
+		await NewsModel.edit(id, { NEWS_CONTENT: content, NEWS_EDIT_TIME: this._timestamp });
+		return [];
 	}
 
 	/**
@@ -81,10 +95,8 @@ class AdminNewsService extends BaseProjectAdminService {
 		id,
 		imgList // 图片数组
 	}) {
-
-		this.AppError('[场地预订P]该功能暂不开放，如有需要请加作者微信：cclinux0730');
-
-
+		await NewsModel.edit(id, { NEWS_PIC: imgList || [], NEWS_EDIT_TIME: this._timestamp });
+		return imgList || [];
 	}
 
 
@@ -98,9 +110,17 @@ class AdminNewsService extends BaseProjectAdminService {
 		desc = '',
 		forms
 	}) {
-
-		this.AppError('[场地预订P]该功能暂不开放，如有需要请加作者微信：cclinux0730');
-
+		let data = {
+			NEWS_TITLE: title,
+			NEWS_CATE_ID: String(cateId),
+			NEWS_CATE_NAME: cateName,
+			NEWS_ORDER: Number(order),
+			NEWS_DESC: desc,
+			NEWS_FORMS: forms || [],
+			NEWS_OBJ: { desc },
+			NEWS_EDIT_TIME: this._timestamp,
+		};
+		await NewsModel.edit(id, data);
 	}
 
 	/**取得资讯分页列表 */
@@ -164,18 +184,23 @@ class AdminNewsService extends BaseProjectAdminService {
 
 	/**修改资讯状态 */
 	async statusNews(id, status) {
-		this.AppError('[场地预订P]该功能暂不开放，如有需要请加作者微信：cclinux0730');
+		status = Number(status);
+		if (![0,1].includes(status)) this.AppError('非法状态值');
+		await NewsModel.edit(id, { NEWS_STATUS: status, NEWS_EDIT_TIME: this._timestamp });
 	}
 
 	/**置顶与排序设定 */
 	async sortNews(id, sort) {
-		this.AppError('[场地预订P]该功能暂不开放，如有需要请加作者微信：cclinux0730');
+		sort = Number(sort);
+		if (sort < 0 || sort > 9999) this.AppError('排序号范围错误');
+		await NewsModel.edit(id, { NEWS_ORDER: sort, NEWS_EDIT_TIME: this._timestamp });
 	}
 
 	/**首页设定 */
 	async vouchNews(id, vouch) {
-		this.AppError('[场地预订P]该功能暂不开放，如有需要请加作者微信：cclinux0730');
-
+		vouch = Number(vouch);
+		if (![0,1].includes(vouch)) this.AppError('非法参数');
+		await NewsModel.edit(id, { NEWS_VOUCH: vouch, NEWS_EDIT_TIME: this._timestamp });
 	}
 }
 

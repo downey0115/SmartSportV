@@ -100,16 +100,18 @@ class AdminUserService extends BaseProjectAdminService {
 		await UserModel.edit(where, data);
 	}
 
-	/**删除用户 */
+	/**删除用户（支持软删除） */
 	async delUser(id) {
 		if (!id) this.AppError('参数错误');
-		// 有有效预约禁止删除
-		let joinCnt = await EnrollJoinModel.count({ ENROLL_JOIN_USER_ID: id, ENROLL_JOIN_STATUS: EnrollJoinModel.STATUS.SUCC });
-		if (joinCnt > 0) this.AppError('该用户存在有效预约记录，禁止删除');
-		// 存在支付流水也禁止删除（模糊匹配）
-		let payCnt = await PayModel.count({ PAY_USER_ID: ['like', id] });
-		if (payCnt > 0) this.AppError('该用户存在支付流水，禁止删除');
+		// 若存在有效预约或支付流水，则执行软删除（置状态=9禁用+备注原因），否则物理删除
+		let hasJoin = await EnrollJoinModel.count({ ENROLL_JOIN_USER_ID: id, ENROLL_JOIN_STATUS: EnrollJoinModel.STATUS.SUCC }) > 0;
+		let hasPay = await PayModel.count({ PAY_USER_ID: ['like', id] }) > 0;
+		if (hasJoin || hasPay) {
+			await UserModel.edit({ USER_MINI_OPENID: id }, { USER_STATUS: 9, USER_CHECK_REASON: '管理员删除（软删）', USER_EDIT_TIME: this._timestamp });
+			return { soft: true };
+		}
 		await UserModel.del({ USER_MINI_OPENID: id });
+		return { soft: false };
 	}
 
 	// #####################导出用户数据

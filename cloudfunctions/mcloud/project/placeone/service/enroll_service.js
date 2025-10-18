@@ -597,8 +597,23 @@ class EnrollService extends BaseProjectService {
 		const payMode = await setupUtil.get('SETUP_PAY_MODE'); // 'free'|'real'
 		if (payMode === 'free') this.AppError('当前为免支付模式，无需支付');
 
-		// TODO: 接入真实支付后，生成支付单并返回 payment 参数
-		this.AppError('当前未开通微信支付，请完成支付配置后再试');
+		// 生成或复用支付单号（占位）
+		let tradeNo = enrollJoin.ENROLL_JOIN_PAY_TRADE_NO;
+		if (!tradeNo) {
+			tradeNo = 'E' + this._timestamp + Math.floor(Math.random() * 100000);
+			await EnrollJoinModel.edit(enrollJoinId, { ENROLL_JOIN_PAY_TRADE_NO: tradeNo, ENROLL_JOIN_LAST_TIME: this._timestamp });
+		}
+
+		// 通过支付服务骨架生成占位 payment 返回给前端
+		let payService = new PayService();
+		const ret = await payService.createPay({
+			tradeNo,
+			totalFee: enrollJoin.ENROLL_JOIN_PAY_FEE || enrollJoin.ENROLL_JOIN_FEE,
+			body: enrollJoin.ENROLL_JOIN_ENROLL_TITLE || '场馆预定',
+			openid: userId,
+		});
+
+		return ret;
 	}
 
 }

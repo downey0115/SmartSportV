@@ -49,19 +49,123 @@ class AdminEnrollService extends BaseProjectAdminService {
 		endPoint,
 		day
 	}) {
-		this.AppError('[场地预订P]该功能暂不开放，如有需要请加作者微信：cclinux0730');
+		// 校验基础参数
+		if (!mobile) this.AppError('手机必填');
+		if (!enrollId || !day || !start || !end || !endPoint) this.AppError('时间或场地参数不完整');
 
+		// 场地存在与启用校验
+		let enroll = await EnrollModel.getOne({ _id: enrollId, ENROLL_STATUS: 1 }, '*');
+		if (!enroll) this.AppError('场地不存在或未启用');
+
+		// 冲突校验（同日同起止同场地）
+		let conflict = await EnrollJoinModel.getOne({ ENROLL_JOIN_ENROLL_ID: enrollId, ENROLL_JOIN_DAY: day, ENROLL_JOIN_STATUS: EnrollJoinModel.STATUS.SUCC, ENROLL_JOIN_START: start, ENROLL_JOIN_END: end });
+		if (conflict) this.AppError('所选时段已被预订');
+
+		// 查找/创建用户（按手机号）
+		let user = await UserModel.getOne({ USER_MOBILE: mobile }, 'USER_MINI_OPENID,USER_NAME,USER_STATUS');
+		if (!user) {
+			let now = timeUtil.time();
+			let name = '管理员代预约';
+			await UserModel.insert({
+				USER_MINI_OPENID: dataUtil.genRandomString(28),
+				USER_MOBILE: mobile,
+				USER_NAME: name,
+				USER_FORMS: [],
+				USER_OBJ: { mobile, name },
+				USER_ADD_TIME: now,
+				USER_REG_TIME: now,
+				USER_LOGIN_TIME: now,
+				USER_LOGIN_CNT: 0,
+				USER_STATUS: 1
+			});
+			user = await UserModel.getOne({ USER_MOBILE: mobile }, 'USER_MINI_OPENID,USER_NAME');
+		}
+
+		let fee = Number(price || 0);
+		if (isNaN(fee) || fee < 0) fee = 0;
+
+		let nowTs = this._timestamp;
+		let forms = [
+			{ mark: 'name', type: 'text', title: '姓名', val: user && user.USER_NAME ? user.USER_NAME : mobile },
+			{ mark: 'phone', type: 'text', title: '手机号', val: mobile },
+		];
+
+		let data = {
+			ENROLL_JOIN_USER_ID: user ? user.USER_MINI_OPENID : 'ADMIN',
+			ENROLL_JOIN_ENROLL_ID: enrollId,
+			ENROLL_JOIN_ENROLL_TITLE: enroll.ENROLL_TITLE,
+			ENROLL_JOIN_CATE_ID: enroll.ENROLL_CATE_ID,
+			ENROLL_JOIN_CATE_NAME: enroll.ENROLL_CATE_NAME,
+			ENROLL_JOIN_CODE: dataUtil.genRandomIntString(15),
+			ENROLL_JOIN_DAY: day,
+			ENROLL_JOIN_START: start,
+			ENROLL_JOIN_END: end,
+			ENROLL_JOIN_END_POINT: endPoint,
+			ENROLL_JOIN_START_FULL: day + ' ' + start,
+			ENROLL_JOIN_END_FULL: day + ' ' + endPoint,
+			ENROLL_JOIN_FEE: Math.round(fee * 100),
+			ENROLL_JOIN_PAY_FEE: Math.round(fee * 100),
+			ENROLL_JOIN_PAY_STATUS: 99, // 免支付
+			ENROLL_JOIN_STATUS: EnrollJoinModel.STATUS.SUCC,
+			ENROLL_JOIN_IS_CHECKIN: 0,
+			ENROLL_JOIN_FORMS: forms,
+			ENROLL_JOIN_OBJ: dataUtil.dbForms2Obj(forms),
+			ENROLL_JOIN_ADD_TIME: nowTs,
+			ENROLL_JOIN_LAST_TIME: nowTs,
+		};
+
+		let id = await EnrollJoinModel.insert(data);
+		return { id };
 	}
 
 	/** 管理员按钮核销 */
 	async checkinEnrollJoin(enrollJoinId, val) {
+		// val: 1=核销, 0=取消核销
+		val = Number(val);
+		if (![0, 1].includes(val)) this.AppError('非法参数');
 
-		this.AppError('[场地预订P]该功能暂不开放，如有需要请加作者微信：cclinux0730');
+		let enrollJoin = await EnrollJoinModel.getOne(enrollJoinId, '*');
+		if (!enrollJoin) this.AppError('记录不存在');
+
+		if (enrollJoin.ENROLL_JOIN_STATUS != EnrollJoinModel.STATUS.SUCC)
+			this.AppError('非成功订单不可操作');
+
+		// 允许取消核销随时进行；执行核销需在未过期时段内
+		if (val === 1) {
+			if (enrollJoin.ENROLL_JOIN_END_FULL <= timeUtil.time('Y-M-D h:m'))
+				this.AppError('已过期，不能核销');
+		}
+
+		let data = {
+			ENROLL_JOIN_IS_CHECKIN: val,
+			ENROLL_JOIN_CHECKIN_TIME: (val === 1) ? this._timestamp : 0,
+			ENROLL_JOIN_LAST_TIME: this._timestamp,
+		};
+		await EnrollJoinModel.edit(enrollJoinId, data);
 	}
 
 	/** 管理员扫码核销 */
 	async scanEnrollJoin(code) {
-		this.AppError('[场地预订P]该功能暂不开放，如有需要请加作者微信：cclinux0730');
+		if (!code || code.length !== 15) this.AppError('无效的预订码');
+		let enrollJoin = await EnrollJoinModel.getOne({ ENROLL_JOIN_CODE: code }, '*');
+		if (!enrollJoin) this.AppError('预订记录不存在');
+
+		if (enrollJoin.ENROLL_JOIN_STATUS != EnrollJoinModel.STATUS.SUCC)
+			this.AppError('当前状态不允许核销');
+
+		if (enrollJoin.ENROLL_JOIN_IS_CHECKIN == 1)
+			return '该订单已核销';
+
+		if (enrollJoin.ENROLL_JOIN_END_FULL <= timeUtil.time('Y-M-D h:m'))
+			this.AppError('已过期，不能核销');
+
+		await EnrollJoinModel.edit({ _id: enrollJoin._id }, {
+			ENROLL_JOIN_IS_CHECKIN: 1,
+			ENROLL_JOIN_CHECKIN_TIME: this._timestamp,
+			ENROLL_JOIN_LAST_TIME: this._timestamp,
+		});
+
+		return '核销成功';
 	}
 
 

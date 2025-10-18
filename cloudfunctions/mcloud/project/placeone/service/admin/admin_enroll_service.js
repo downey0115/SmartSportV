@@ -450,9 +450,76 @@ class AdminEnrollService extends BaseProjectAdminService {
 		end,
 		status
 	}) {
+		// 组装查询条件
+		let where = { };
+		if (cateId) where.ENROLL_JOIN_CATE_ID = String(cateId);
+		if (start && end) where.ENROLL_JOIN_DAY = ['between', start, end];
 
-		this.AppError('[场地预订P]该功能暂不开放，如有需要请加作者微信：cclinux0730');
+		// 状态筛选：1 成功, 9 用户取消, 99 系统取消, 998 已核销, 999 所有
+		status = Number(status || 1);
+		if (status === 998) {
+			where.ENROLL_JOIN_STATUS = EnrollJoinModel.STATUS.SUCC;
+			where.ENROLL_JOIN_IS_CHECKIN = 1;
+		} else if (status === 999) {
+			// 全部：不过滤状态
+		} else {
+			where.ENROLL_JOIN_STATUS = status;
+		}
 
+		// 拉取全部数据（分批）
+		let page = 1, size = 200; // 单批上限
+		let orderBy = { 'ENROLL_JOIN_ADD_TIME': 'desc' };
+		let fields = '*';
+		let total = 0;
+		let all = [];
+		while (true) {
+			let ret = await EnrollJoinModel.getList(where, fields, orderBy, page, size, page === 1, 0);
+			if (page === 1) total = ret.total || 0;
+			let list = ret.list || [];
+			all = all.concat(list);
+			if (!list.length || all.length >= total) break;
+			page++;
+		}
+
+		// 构造导出数据
+		let header = [
+			'预订码', '分类', '场地', '日期', '开始', '结束', '标价(元)', '支付(元)', '支付状态', '订单状态', '是否核销', '核销时间', '预约人', '手机号', '创建时间', '最后修改'
+		];
+		let data = [header];
+		for (let item of all) {
+			let payFeeY = (Number(item.ENROLL_JOIN_PAY_FEE || 0) / 100).toFixed(2);
+			let feeY = (Number(item.ENROLL_JOIN_FEE || 0) / 100).toFixed(2);
+			let payStatusTxt = (item.ENROLL_JOIN_PAY_STATUS == 1) ? '已支付' : (item.ENROLL_JOIN_PAY_STATUS == 99 ? '免支付' : '未支付');
+			let statusTxt = (item.ENROLL_JOIN_STATUS == 1) ? '成功' : (item.ENROLL_JOIN_STATUS == 9 ? '用户取消' : (item.ENROLL_JOIN_STATUS == 99 ? '系统取消' : String(item.ENROLL_JOIN_STATUS)));
+			let isCheckTxt = item.ENROLL_JOIN_IS_CHECKIN == 1 ? '是' : '否';
+			let name = (item.ENROLL_JOIN_OBJ && item.ENROLL_JOIN_OBJ.name) || '';
+			let phone = (item.ENROLL_JOIN_OBJ && item.ENROLL_JOIN_OBJ.phone) || '';
+			let addTime = timeUtil.timestamp2Time(item.ENROLL_JOIN_ADD_TIME);
+			let lastTime = timeUtil.timestamp2Time(item.ENROLL_JOIN_LAST_TIME);
+			let checkTime = timeUtil.timestamp2Time(item.ENROLL_JOIN_CHECKIN_TIME);
+			data.push([
+				item.ENROLL_JOIN_CODE || '',
+				item.ENROLL_JOIN_CATE_NAME || '',
+				item.ENROLL_JOIN_ENROLL_TITLE || '',
+				item.ENROLL_JOIN_DAY || '',
+				item.ENROLL_JOIN_START || '',
+				item.ENROLL_JOIN_END_POINT || '',
+				feeY,
+				payFeeY,
+				payStatusTxt,
+				statusTxt,
+				isCheckTxt,
+				checkTime,
+				name,
+				phone,
+				addTime,
+				lastTime
+			]);
+		}
+
+		let title = '场地预约订单';
+		let options = { '!cols': [{wch:18},{wch:10},{wch:20},{wch:12},{wch:8},{wch:8},{wch:10},{wch:10},{wch:10},{wch:10},{wch:8},{wch:19},{wch:12},{wch:12},{wch:19},{wch:19}] };
+		return await exportUtil.exportDataExcel(EXPORT_ENROLL_JOIN_DATA_KEY, title, all.length, data, options);
 	}
 
 

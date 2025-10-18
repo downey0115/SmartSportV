@@ -79,6 +79,28 @@ Page({
 	/**
 	 * 生命周期函数--监听页面初次渲染完成
 	 */
+	bindGoPayTap: async function () {
+		let id = this.data.id;
+		if (!id) return;
+		try {
+			let params = { enrollJoinId: id };
+			let opt = { title: '下单中' };
+			let ret = await cloudHelper.callCloudSumbit('enroll/go_pay', params, opt);
+			if (ret && ret.payment) {
+				wx.requestPayment({
+					...ret.payment,
+					success: async () => { await this._loadDetail(); },
+					fail: () => {},
+					complete: () => {}
+				});
+			} else {
+				await this._loadDetail();
+			}
+		} catch (err) {
+			console.error(err);
+		}
+	},
+
 	onReady: function () {
 
 	},

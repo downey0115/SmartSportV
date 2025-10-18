@@ -161,7 +161,7 @@ class EnrollService extends BaseProjectService {
 		orderBy = orderBy || {
 			'ENROLL_JOIN_ADD_TIME': 'desc'
 		};
-		let fields = 'ENROLL_JOIN_ENROLL_TITLE,ENROLL_JOIN_IS_CHECKIN,ENROLL_JOIN_CATE_NAME,ENROLL_JOIN_ENROL_TITLE,ENROLL_JOIN_END_FULL,ENROLL_JOIN_OBJ,ENROLL_JOIN_DAY,ENROLL_JOIN_START,ENROLL_JOIN_END,ENROLL_JOIN_END_POINT,ENROLL_JOIN_LAST_TIME,ENROLL_JOIN_ENROLL_ID,ENROLL_JOIN_STATUS,ENROLL_JOIN_ADD_TIME,enroll.ENROLL_EDIT_SET,enroll.ENROLL_CANCEL_SET';
+		let fields = 'ENROLL_JOIN_ENROLL_TITLE,ENROLL_JOIN_IS_CHECKIN,ENROLL_JOIN_PAY_STATUS,ENROLL_JOIN_CATE_NAME,ENROLL_JOIN_ENROL_TITLE,ENROLL_JOIN_END_FULL,ENROLL_JOIN_OBJ,ENROLL_JOIN_DAY,ENROLL_JOIN_START,ENROLL_JOIN_END,ENROLL_JOIN_END_POINT,ENROLL_JOIN_LAST_TIME,ENROLL_JOIN_ENROLL_ID,ENROLL_JOIN_STATUS,ENROLL_JOIN_ADD_TIME,enroll.ENROLL_EDIT_SET,enroll.ENROLL_CANCEL_SET';
 
 		let where = {
 			ENROLL_JOIN_USER_ID: userId
@@ -343,7 +343,7 @@ class EnrollService extends BaseProjectService {
 		day,
 		forms
 	}) {
-		// 最小可用实现：不走在线支付，直接创建预约成功记录（PAY_STATUS=99）
+		// 根据配置决定：免支付 or 真实支付
 		// 1) 校验场地存在且可用
 		let enroll = await EnrollModel.getOne({ _id: enrollId, ENROLL_STATUS: EnrollModel.STATUS.COMM });
 		if (!enroll) this.AppError('该场地不存在');
@@ -389,12 +389,19 @@ class EnrollService extends BaseProjectService {
 		});
 		if (conflict) this.AppError('所选时段已被预订');
 
-		let id = await EnrollJoinModel.insert(data);
+		// 读取支付模式
+		const setupUtil = require('../../../framework/utils/setup/setup_util.js');
+		const payMode = await setupUtil.get('SETUP_PAY_MODE'); // 'free'|'real'
 
-		// 可在此更新统计（占位）
+		let id = await EnrollJoinModel.insert(data);
 		this.statEnrollJoin();
 
-		// 与前端约定：无 payRet 即表示无需拉起支付，前端会提示成功
+		if (payMode === 'real') {
+			// 暂未接入支付，给出友好提示（后续接入再返回真实 payment）
+			this.AppError('当前未开通微信支付，请在「系统设置」将支付模式切换为免支付或完成支付配置后再试');
+		}
+
+		// 免支付：不拉起支付
 		return { id, payRet: null };
 	}
 
@@ -573,7 +580,26 @@ class EnrollService extends BaseProjectService {
 
 	}
 
+	/** 为已生成的待支付订单发起支付 */
+	async goPay(userId, { enrollJoinId }) {
+		let where = {
+			_id: enrollJoinId,
+			ENROLL_JOIN_USER_ID: userId
+		};
+		let enrollJoin = await EnrollJoinModel.getOne(where, '*');
+		if (!enrollJoin) this.AppError('订单不存在');
+		if (enrollJoin.ENROLL_JOIN_STATUS != EnrollJoinModel.STATUS.SUCC) this.AppError('订单状态异常');
+		if (enrollJoin.ENROLL_JOIN_IS_CHECKIN == 1) this.AppError('已核销不可支付');
+		if (enrollJoin.ENROLL_JOIN_END_FULL <= timeUtil.time('Y-M-D h:m')) this.AppError('已过期不可支付');
+		if (enrollJoin.ENROLL_JOIN_PAY_STATUS != 0) this.AppError('订单已支付或无需支付');
 
+		const setupUtil = require('../../../framework/utils/setup/setup_util.js');
+		const payMode = await setupUtil.get('SETUP_PAY_MODE'); // 'free'|'real'
+		if (payMode === 'free') this.AppError('当前为免支付模式，无需支付');
+
+		// TODO: 接入真实支付后，生成支付单并返回 payment 参数
+		this.AppError('当前未开通微信支付，请完成支付配置后再试');
+	}
 
 }
 

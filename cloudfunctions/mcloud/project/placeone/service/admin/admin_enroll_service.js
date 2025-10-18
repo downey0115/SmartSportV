@@ -84,6 +84,10 @@ class AdminEnrollService extends BaseProjectAdminService {
 		let fee = Number(price || 0);
 		if (isNaN(fee) || fee < 0) fee = 0;
 
+		// 读取支付模式
+		const setupUtil = require('../../../../framework/utils/setup/setup_util.js');
+		const payMode = await setupUtil.get('SETUP_PAY_MODE'); // 'free'|'real'
+
 		let nowTs = this._timestamp;
 		let forms = [
 			{ mark: 'name', type: 'text', title: '姓名', val: user && user.USER_NAME ? user.USER_NAME : mobile },
@@ -105,7 +109,7 @@ class AdminEnrollService extends BaseProjectAdminService {
 			ENROLL_JOIN_END_FULL: day + ' ' + endPoint,
 			ENROLL_JOIN_FEE: Math.round(fee * 100),
 			ENROLL_JOIN_PAY_FEE: Math.round(fee * 100),
-			ENROLL_JOIN_PAY_STATUS: 99, // 免支付
+			ENROLL_JOIN_PAY_STATUS: (payMode === 'real' ? 0 : 99),
 			ENROLL_JOIN_STATUS: EnrollJoinModel.STATUS.SUCC,
 			ENROLL_JOIN_IS_CHECKIN: 0,
 			ENROLL_JOIN_FORMS: forms,

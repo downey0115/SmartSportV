@@ -19,7 +19,8 @@
 				</view> 
 
 				<image wx:if="{{enrollJoin.out&&enrollJoin.ENROLL_JOIN_STATUS==1&&enrollJoin.ENROLL_JOIN_IS_CHECKIN==0}}" class="status" mode="aspectFill" src="../../../images/status/out.png" />
-				<image wx:elif="{{!enrollJoin.out&&enrollJoin.ENROLL_JOIN_STATUS==1&&enrollJoin.ENROLL_JOIN_IS_CHECKIN==0}}"  class="status" mode="aspectFill" src="../../../images/status/wait.png" />
+				<image wx:elif="{{!enrollJoin.out&&enrollJoin.ENROLL_JOIN_STATUS==1&&enrollJoin.ENROLL_JOIN_IS_CHECKIN==0&&enrollJoin.ENROLL_JOIN_PAY_STATUS==0}}"  class="status" mode="aspectFill" src="../../../images/status/wait.png" />
+				<image wx:elif="{{!enrollJoin.out&&enrollJoin.ENROLL_JOIN_STATUS==1&&enrollJoin.ENROLL_JOIN_IS_CHECKIN==0&&enrollJoin.ENROLL_JOIN_PAY_STATUS!=0}}"  class="status" mode="aspectFill" src="../../../images/status/wait.png" />
 				<image wx:elif="{{enrollJoin.ENROLL_JOIN_STATUS==1&&enrollJoin.ENROLL_JOIN_IS_CHECKIN==1}}"  class="status" mode="aspectFill" src="../../../images/status/check.png" />
 				<image wx:elif="{{enrollJoin.ENROLL_JOIN_STATUS==9||enrollJoin.ENROLL_JOIN_STATUS==99}}"  class="status" mode="aspectFill" src="../../../images/status/cancel.png" />
 
@@ -44,6 +45,13 @@
 		</view>
 
 		<view class="info-list-box" wx:if="{{enrollJoin.ENROLL_JOIN_STATUS==1&&enrollJoin.ENROLL_JOIN_IS_CHECKIN==0}}">
+			<view wx:if="{{!enrollJoin.out&&enrollJoin.ENROLL_JOIN_PAY_STATUS==0}}" class="item card-project shadow-project">
+				<view class="info">
+					<view class="center">
+						<button bindtap="bindGoPayTap" class="btn xxl bg-green">去支付</button>
+					</view>
+				</view>
+			</view>
 			<view class="item card-project shadow-project">
 				<view class="info">
 					<view class="center"><text class="text-bold margin-right-s">预订码</text> (向工作人员出示进行核销)</view>

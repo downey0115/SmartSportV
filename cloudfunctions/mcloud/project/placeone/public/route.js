@@ -84,6 +84,7 @@ module.exports = {
 	'enroll/my_join_list': 'enroll_controller@getMyEnrollJoinList',
 	'enroll/my_join_cancel': 'enroll_controller@cancelMyEnrollJoin',
 	'enroll/my_join_detail': 'enroll_controller@getMyEnrollJoinDetail',
+	'enroll/go_pay': 'enroll_controller@goPay',
 
 	'admin/enroll_all': 'admin/admin_enroll_controller@getAdminAllEnroll',
 	'admin/enroll_join_appt': 'admin/admin_enroll_controller@enrollJoinByAdmin',

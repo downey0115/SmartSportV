@@ -219,7 +219,16 @@ class EnrollController extends BaseProjectController {
 		return await service.cancelMyEnrollJoin(this._userId, input.enrollJoinId);
 	}
 
+	/** 用户在我的预约中对待支付订单发起支付 */
+	async goPay() {
+		let rules = {
+			enrollJoinId: 'must|id',
+		};
+		let input = this.validateData(rules);
 
+		let service = new EnrollService();
+		return await service.goPay(this._userId, input);
+	}
 
 }
 

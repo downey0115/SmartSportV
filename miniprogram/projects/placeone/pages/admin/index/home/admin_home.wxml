@@ -53,6 +53,9 @@
 		<view class="item" bindtap="url" data-url="../../enroll/flow/admin_enroll_flow"> <text class="icon-sort text-purple"></text> <text class="text-black">微信支付流水查询</text>
 		</view>
 
+		<view class="item" bindtap="url" data-url="../../lesson/home/admin_lesson_home"> <text class="icon-flag text-orange"></text> <text class="text-black">约课管理</text>
+		</view>
+
 	</view>
 
 

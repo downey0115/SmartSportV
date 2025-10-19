@@ -1,0 +1,27 @@
+<view class="main">
+	<view class="card-project shadow-project padding">
+		<view class="title">选择日期</view>
+		<my_date_select bind:date="onDateChange" initDate="{{date}}"></my_date_select>
+	</view>
+	<view class="card-project shadow-project padding margin-top">
+		<view class="title">选择老师</view>
+		<view class="grid">
+			<view class="grid-item {{selCoachId==item._id?'cur':''}}" wx:for="{{teachers}}" wx:key="_id" bindtap="selCoach" data-id="{{item._id}}">{{item.COACH_NAME}}</view>
+		</view>
+	</view>
+	<view class="card-project shadow-project padding margin-top">
+		<view class="title">选择课程</view>
+		<view class="grid">
+			<view class="grid-item {{selCourseId==item._id?'cur':''}}" wx:for="{{courses}}" wx:key="_id" bindtap="selCourse" data-id="{{item._id}}">{{item.COURSE_NAME}}</view>
+		</view>
+	</view>
+	<view class="card-project shadow-project padding margin-top">
+		<view class="title">选择场馆</view>
+		<view class="grid">
+			<view class="grid-item {{selVenueId==item._id?'cur':''}}" wx:for="{{venues}}" wx:key="_id" bindtap="selVenue" data-id="{{item._id}}">{{item.ENROLL_TITLE}}</view>
+		</view>
+	</view>
+	<view class="padding margin-top">
+		<button class="btn" bindtap="goSession" disabled="{{!canGo}}">选择场次</button>
+	</view>
+</view>

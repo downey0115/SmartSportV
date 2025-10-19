@@ -4,6 +4,14 @@
 	</view>
 	<view class="down">
 		<view class="menu card-project shadow-project">
+			<view bindtap="url" data-url="../../lesson/index/lesson_index" class="item">
+				<view class="item-inner">
+					<view class="img shadow">
+						<image src="../../../images/menu/1.png" />
+					</view>
+					<view class="title">约课</view>
+				</view>
+			</view>
 			<view bindtap="url" wx:for="{{cateList}}" wx:key="k" data-url="../../enroll/all/enroll_all?cateId={{item.id}}" class="item">
 				<view class="item-inner">
 					<view class="img shadow">

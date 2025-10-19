@@ -1,0 +1,10 @@
+<view class="main padding">
+	<view class="card-project shadow-project padding">
+		<view>日期：{{date}}</view>
+		<view>时间：{{start}} ~ {{endPoint}}</view>
+		<view>费用：¥{{(fee/100).toFixed(2)}}</view>
+	</view>
+	<view class="padding margin-top">
+		<button class="btn" bindtap="submit">提交订单</button>
+	</view>
+</view>

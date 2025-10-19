@@ -1,0 +1,5 @@
+{
+	"usingComponents": {
+		"my_date_select": "../../../cmpts/my_date_select/my_date_select_cmpt"
+	}
+}

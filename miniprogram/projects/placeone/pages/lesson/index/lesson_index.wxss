@@ -1,0 +1,4 @@
+.grid{display:flex;flex-wrap:wrap}
+.grid-item{padding:12rpx 20rpx;margin:10rpx;border-radius:30rpx;background:#f6f6f6}
+.grid-item.cur{background:#FED202;color:#000}
+.btn{background:#FED202;color:#000}

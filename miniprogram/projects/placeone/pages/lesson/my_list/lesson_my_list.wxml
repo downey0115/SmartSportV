@@ -1,0 +1,9 @@
+<view class="main padding">
+	<view class="title">我的约课</view>
+	<block wx:for="{{list}}" wx:key="_id">
+		<view class="card-project shadow-project padding margin-top">
+			<view>{{item.LESSON_ORDER_DATE}} {{item.LESSON_ORDER_START}} ~ {{item.LESSON_ORDER_END_POINT}}</view>
+			<view>状态：{{item.LESSON_ORDER_STATUS==1?'成功':'已取消'}}</view>
+		</view>
+	</block>
+</view>

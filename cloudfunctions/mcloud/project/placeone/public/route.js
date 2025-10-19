@@ -113,5 +113,13 @@ module.exports = {
 	'admin/enroll_temp_edit': 'admin/admin_enroll_controller@editTemp',
 	'admin/enroll_pay_flow_list': 'admin/admin_enroll_controller@getAdminPayFlowList', 
  
+	// 约课
+	'lesson/teachers': 'lesson_controller@getTeachers',
+	'lesson/courses': 'lesson_controller@getCourses',
+	'lesson/venues': 'lesson_controller@getVenues',
+	'lesson/sessions': 'lesson_controller@getSessions',
+	'lesson/order_create': 'lesson_controller@orderCreate',
+	'lesson/my_list': 'lesson_controller@myList',
+	'lesson/my_detail': 'lesson_controller@myDetail',
 
 }

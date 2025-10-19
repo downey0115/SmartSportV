@@ -1,0 +1,22 @@
+<view wx:if="{{!isLoad}}" class="margin-top load loading text-l text-grey"></view>
+
+<block wx:if="{{isAdmin && isLoad}}">
+  <view class="main-admin">
+    <view class="form-box shadow">
+      <view class="form-group">
+        <view class="label">支付模式</view>
+        <radio-group bindchange="bindRadioChange">
+          <label class="radio-item">
+            <radio value="free" checked="{{mode==='free'}}"/> 免支付（拦截支付）
+          </label>
+          <label class="radio-item">
+            <radio value="real" checked="{{mode==='real'}}"/> 真实支付（当前占位期将提示未开通）
+          </label>
+        </radio-group>
+      </view>
+    </view>
+  </view>
+  <view class="btn-bottom-admin">
+    <view bindtap="bindSaveTap" class="save">保存修改</view>
+  </view>
+</block>

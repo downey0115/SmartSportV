@@ -1,0 +1,2 @@
+.radio-item{display:flex;align-items:center;margin:12rpx 0;}
+.label{font-size:28rpx;color:#666;margin-bottom:16rpx;}

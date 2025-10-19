@@ -19,6 +19,7 @@
 		"projects/placeone/pages/admin/setup/about/admin_setup_about",
 		"projects/placeone/pages/admin/setup/about_list/admin_setup_about_list",
 		"projects/placeone/pages/admin/setup/qr/admin_setup_qr",
+		"projects/placeone/pages/admin/setup/paymode/admin_setup_paymode",
 		"projects/placeone/pages/admin/index/home/admin_home",
 		"projects/placeone/pages/admin/index/login/admin_login",
 		"projects/placeone/pages/admin/content/admin_content",

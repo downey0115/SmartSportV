@@ -113,7 +113,7 @@ module.exports = {
 	'admin/enroll_temp_edit': 'admin/admin_enroll_controller@editTemp',
 	'admin/enroll_pay_flow_list': 'admin/admin_enroll_controller@getAdminPayFlowList', 
  
-	// 约课
+	// 约课（用户端）
 	'lesson/teachers': 'lesson_controller@getTeachers',
 	'lesson/courses': 'lesson_controller@getCourses',
 	'lesson/venues': 'lesson_controller@getVenues',
@@ -121,5 +121,18 @@ module.exports = {
 	'lesson/order_create': 'lesson_controller@orderCreate',
 	'lesson/my_list': 'lesson_controller@myList',
 	'lesson/my_detail': 'lesson_controller@myDetail',
+
+	// 约课（管理端）
+	'admin/lesson_coach_list': 'admin/admin_lesson_controller@coachList',
+	'admin/lesson_coach_insert': 'admin/admin_lesson_controller@coachInsert',
+	'admin/lesson_coach_edit': 'admin/admin_lesson_controller@coachEdit',
+	'admin/lesson_course_list': 'admin/admin_lesson_controller@courseList',
+	'admin/lesson_course_insert': 'admin/admin_lesson_controller@courseInsert',
+	'admin/lesson_course_edit': 'admin/admin_lesson_controller@courseEdit',
+	'admin/lesson_schedule_upsert': 'admin/admin_lesson_controller@scheduleUpsert',
+	'admin/lesson_schedule_list': 'admin/admin_lesson_controller@scheduleList',
+	'admin/lesson_order_list': 'admin/admin_lesson_controller@orderList',
+	'admin/lesson_order_export': 'admin/admin_lesson_controller@orderExport',
+	'admin/lesson_demo_seed': 'admin/admin_lesson_controller@demoSeed',
 
 }

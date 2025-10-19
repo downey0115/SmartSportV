@@ -48,18 +48,23 @@ class LessonService extends BaseProjectService {
 		let where = { LESSON_SCHEDULE_STATUS: 1, LESSON_SCHEDULE_COACH_ID: coachId, LESSON_SCHEDULE_COURSE_ID: courseId, LESSON_SCHEDULE_VENUE_ID: venueId, LESSON_SCHEDULE_DATE: date };
 		let row = await LessonScheduleModel.getOne(where, '*');
 		let slots = (row && row.LESSON_SCHEDULE_SLOTS) || [];
-		// 标记已占用
-		let used = await LessonOrderModel.getAll({ LESSON_ORDER_VENUE_ID: venueId, LESSON_ORDER_DATE: date, LESSON_ORDER_STATUS: 1 }, 'LESSON_ORDER_START,LESSON_ORDER_END');
-		let ret = slots.map(s => {
-			let conflict = used.find(u => u.LESSON_ORDER_START === s.start && u.LESSON_ORDER_END === s.end);
-			return Object.assign({}, s, { disabled: !!conflict });
-		});
+		// 读取课程容量
+		let course = await CourseModel.getOne(courseId, 'COURSE_CAPACITY');
+		let capacity = (course && Number(course.COURSE_CAPACITY)) || 1;
+		// 统计每个slot已下单数，禁用满员的slot
+		let ret = [];
+		for (let s of slots) {
+			let cnt = await LessonOrderModel.count({ LESSON_ORDER_VENUE_ID: venueId, LESSON_ORDER_DATE: date, LESSON_ORDER_STATUS: 1, LESSON_ORDER_START: s.start, LESSON_ORDER_END: s.end });
+			ret.push(Object.assign({}, s, { disabled: cnt >= capacity, left: Math.max(0, capacity - cnt) }));
+		}
 		return ret;
 	}
 	async orderCreate(userId, { coachId, courseId, venueId, date, start, end, endPoint, fee, forms }) {
-		// 冲突校验（对比 lesson_order 与 enroll_join）
-		let conflictLesson = await LessonOrderModel.getOne({ LESSON_ORDER_VENUE_ID: venueId, LESSON_ORDER_DATE: date, LESSON_ORDER_START: start, LESSON_ORDER_END: end, LESSON_ORDER_STATUS: 1 });
-		if (conflictLesson) this.AppError('所选时段已被预约');
+		// 容量校验（团体课允许<=capacity人同一场次）
+		let course = await CourseModel.getOne(courseId, 'COURSE_CAPACITY');
+		let capacity = (course && Number(course.COURSE_CAPACITY)) || 1;
+		let cnt = await LessonOrderModel.count({ LESSON_ORDER_VENUE_ID: venueId, LESSON_ORDER_DATE: date, LESSON_ORDER_STATUS: 1, LESSON_ORDER_START: start, LESSON_ORDER_END: end });
+		if (cnt >= capacity) this.AppError('所选时段已满员');
 		let now = this._timestamp;
 		let data = {
 			LESSON_ORDER_USER_ID: userId,

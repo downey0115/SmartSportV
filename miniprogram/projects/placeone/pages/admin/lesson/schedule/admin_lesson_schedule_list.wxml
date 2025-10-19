@@ -1,0 +1,8 @@
+<block wx:if="{{isAdmin&&isLoad}}">
+	<cmpt-comm-list source='admin' type="admin-lesson-schedule-list" search="{{search||''}}" _menus="{{sortMenus}}" _items="{{sortItems}}" route="admin/lesson_schedule_list" sortMenusDefaultIndex="0" topBottom="50" placeholder="按日期/教练/课程/场馆搜索" bind:list="bindCommListCmpt">
+		<view slot="searchEnd">
+			<button class="btn-mini" bindtap="seedDemo">示例数据</button>
+		</view>
+		<template is="listLoadTpl" data="{{skin:'load-project',dataList}}" />
+	</cmpt-comm-list>
+</block>

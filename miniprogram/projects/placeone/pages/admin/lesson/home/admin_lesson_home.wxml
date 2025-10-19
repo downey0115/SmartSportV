@@ -1,0 +1,14 @@
+<block wx:if="{{isAdmin}}">
+	<view class="main padding">
+		<view class="card-project shadow-project padding">
+			<view class="title">约课管理快捷入口</view>
+			<button class="btn margin-top" bindtap="seedDemo">生成示例排班数据</button>
+		</view>
+		<view class="grid grid-two margin-top">
+			<button class="btn" bindtap="nav" data-url="/projects/placeone/pages/admin/lesson/coach/admin_lesson_coach_list">教练管理</button>
+			<button class="btn" bindtap="nav" data-url="/projects/placeone/pages/admin/lesson/course/admin_lesson_course_list">课程管理</button>
+			<button class="btn" bindtap="nav" data-url="/projects/placeone/pages/admin/lesson/schedule/admin_lesson_schedule_list">排班管理</button>
+			<button class="btn" bindtap="nav" data-url="/projects/placeone/pages/admin/lesson/order/admin_lesson_order_list">订单管理/导出</button>
+		</view>
+	</view>
+</block>

@@ -1,6 +1,7 @@
 <view class="main padding">
 	<view class="title">选择场次</view>
 	<my_time_select bind:time="onTime" times="{{times}}" usedList="{{usedList}}"></my_time_select>
+	<view class="padding margin-top text-grey" wx:if="{{sel}}">剩余名额：{{sel.left||0}}</view>
 	<view class="padding margin-top">
 		<button class="btn" bindtap="goOrder" disabled="{{!sel}}">下一步</button>
 	</view>

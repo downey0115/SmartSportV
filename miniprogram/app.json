@@ -55,7 +55,12 @@
 		"projects/placeone/pages/lesson/index/lesson_index",
 		"projects/placeone/pages/lesson/select_session/lesson_select_session",
 		"projects/placeone/pages/lesson/order_confirm/lesson_order_confirm",
-		"projects/placeone/pages/lesson/my_list/lesson_my_list"
+		"projects/placeone/pages/lesson/my_list/lesson_my_list",
+		"projects/placeone/pages/admin/lesson/home/admin_lesson_home",
+		"projects/placeone/pages/admin/lesson/coach/admin_lesson_coach_list",
+		"projects/placeone/pages/admin/lesson/course/admin_lesson_course_list",
+		"projects/placeone/pages/admin/lesson/schedule/admin_lesson_schedule_list",
+		"projects/placeone/pages/admin/lesson/order/admin_lesson_order_list"
 	],
 	"window": {
 		"backgroundColor": "#f1f1f1",

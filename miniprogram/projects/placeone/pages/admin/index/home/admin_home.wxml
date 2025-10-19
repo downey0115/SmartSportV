@@ -73,6 +73,12 @@
 			</view>
 		</view>
 
+		<view class="item arrow" bindtap="url" data-url="../../setup/paymode/admin_setup_paymode">
+			<view class="content">
+				<text class="icon-safe text-blue"></text>
+				<text class="text-black">支付模式配置</text>
+			</view>
+		</view>
 
 	</view>
 
